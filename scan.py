@@ -2,17 +2,65 @@ import sys
 from pathlib import Path
 import pandas as pd
 import os
+import subprocess
 
-CONSOLIDATED_SHEET_NAME = "consolidated.xlsx"
+CONSOLIDATED_SHEET_NAME = "CONSOLIDATED 27.11.2025.xlsx"
 ROOT_DIR = Path(__file__).resolve().parent
 CONSOLIDATED_PATH = ROOT_DIR / "input" / CONSOLIDATED_SHEET_NAME
 BARCODE_CSV_PATH = ROOT_DIR / "data" / "barcode-data-master.csv"
+STICKER_DIR = ROOT_DIR / "Inventronix"
+BARTEND_EXE = r"C:\Program Files\Seagull\BarTender 2022\BarTend.exe"
+PRINTER_NAME = "TSC TE244"
+BTW_TEMPLATE = r"C:\Users\ems\Desktop\inventory-management\Inventronix\label.btw"
+
+def print_btw_silent(btw_path: str):
+    cmd = [
+        BARTEND_EXE,
+        f"/AF={btw_path}",        # BarTender format file
+        "/P",                     # Print
+        f"/PRN={PRINTER_NAME}",   # Target printer
+        "/X"                      # Exit when done
+    ]
+    subprocess.run(cmd, check=True)
 
 def print_sticker(sticker_location: str) -> None:
-    printing(f"  Sticker: {sticker_location}")
+    print(f"Printing Sticker: {sticker_location}")
     try:
-        file_path = sticker_location
-        os.startfile(file_path)
+        base_folder = r"C:\Users\ems\Desktop\inventory-management\Inventronix"
+        file_path = rf"{base_folder}\{sticker_location}"   # insert variable here
+        print_btw_silent(file_path)
+        print(f"Done Printing Sticker: {sticker_location}")
+    except Exception as e:
+        print(f"Error printing sticker: {e}")
+    return
+
+def print_label(id_value: str):
+    # CSV with header 'id' matching your field name in BarTender
+    csv_content = "id\n" + id_value + "\n"
+
+    # Create temp CSV
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".csv", mode="w", newline="") as f:
+        data_path = f.name
+        f.write(csv_content)
+
+    try:
+        # Call BarTender to print using that CSV
+        subprocess.run([
+            BARTEND_EXE,
+            f"/AF={BTW_TEMPLATE}",   # your .btw
+            f"/D={data_path}",       # data file
+            "/P",                    # print
+            f"/PRN={PRINTER_NAME}",  # printer
+            "/X"                     # exit
+        ], check=True)
+    finally:
+        os.remove(data_path)
+
+def print_custom_sticker(id: str) -> None:
+    print(f"Printing Sticker: {sticker_location}")
+    try:
+        print_label(id)
+        print(f"Done Printing Sticker: {sticker_location}")
     except Exception as e:
         print(f"Error printing sticker: {e}")
     return
@@ -145,9 +193,9 @@ def interactive_scan(expected: dict, reference: dict) -> None:
             break
 
         # supplier_id = scanned
-        #for inventronics
-        start_index = scanned.index('~') + 1
-        end_index = len(scanned)
+        # for inventronics
+        start_index = 0
+        end_index = scanned.index('#')
         supplier_id = scanned[start_index:end_index]
 
         if supplier_id not in reference:
@@ -187,7 +235,8 @@ def interactive_scan(expected: dict, reference: dict) -> None:
         else:
             print("  ✅ This ID is now fully matched.")
 
-        print_sticker(sticker_location)
+        # print_sticker(sticker_location)
+        print_custom_sticker(kem_id)
 
         print()
 
@@ -241,5 +290,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
