@@ -3,8 +3,13 @@ from pathlib import Path
 import pandas as pd
 import os
 import re
+import pyxlsb
 
-CONSOLIDATED_SHEET_NAME = "consolidated.xlsx"
+##CHANGE ME
+CONSOLIDATED_SHEET_NAME = "consolidated-18.xlsb"
+SUPPLIER_ID_COLUMN = 0
+REEL_SIZE_COLUMN = 4
+
 ROOT_DIR = Path(__file__).resolve().parent
 CONSOLIDATED_PATH = ROOT_DIR / "input" / CONSOLIDATED_SHEET_NAME
 BARCODE_CSV_PATH = ROOT_DIR / "data" / "barcode-data-new-master.csv"
@@ -14,7 +19,7 @@ BTW_TEMPLATE = r"C:\Users\ems\Desktop\inventory-management\Inventronix\label.btw
 
 def load_expected_quantities(consolidated_path: Path) -> dict:
     """
-    Read the consolidated.xlsx file and build a dict:
+    Read the consolidated file (xlsx or xlsb) and build a dict:
         {supplier_id: {"total_quantity": int, "seen_quantity": int}}
     Assumptions:
     - Supplier ID is in column C
@@ -24,16 +29,21 @@ def load_expected_quantities(consolidated_path: Path) -> dict:
     if not consolidated_path.exists():
         raise FileNotFoundError(f"Expected file not found: {consolidated_path}")
 
-    # Read the whole sheet; default first sheet
-    # Use column positions (0-based index: C -> 2, J -> 9)
-    df = pd.read_excel(consolidated_path, engine="openpyxl")
-    supplier_col_idx = 2
-    qty_col_idx = 9
+    # Determine file type and read accordingly
+    if consolidated_path.suffix.lower() == ".xlsb":
+        try:
+            df = pd.read_excel(consolidated_path, engine="pyxlsb")
+        except ImportError:
+            raise ImportError("pyxlsb is required to read .xlsb files. Install it with: pip install pyxlsb")
+    else:
+        df = pd.read_excel(consolidated_path, engine="openpyxl")
+    
+    supplier_col_idx = SUPPLIER_ID_COLUMN
+    qty_col_idx = REEL_SIZE_COLUMN
 
     if df.shape[1] <= max(supplier_col_idx, qty_col_idx):
         raise ValueError(
-            "consolidated.xlsx does not appear to have the expected columns "
-            "(need at least C and J)."
+            "consolidated file does not appear to have the expected columns "
         )
 
     supplier_ids = df.iloc[:, supplier_col_idx]
@@ -302,8 +312,8 @@ def main() -> None:
 
         print(expected)
         print("\n\n")
-        print(reference)
-        print("\n\n")
+        # print(reference)
+        # print("\n\n")
 
     except Exception as e:
         print(f"Failed to initialize data: {e}", file=sys.stderr)
