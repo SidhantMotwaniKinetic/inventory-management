@@ -3,6 +3,9 @@ from pathlib import Path
 import pandas as pd
 import os
 import re
+import tempfile
+import subprocess
+
 import pyxlsb
 
 ##CHANGE ME
@@ -135,13 +138,13 @@ def print_sticker(sticker: str):
     """Placeholder for printing sticker information."""
     if sticker:
         print(f" Sticker: {sticker}")
-        # print_label(sticker)
+        print_label(sticker)
         print("Done Printing")
     else:
         print(" Erorr: No sticker specified.")
 
 def generate_sticker_string(kem_id: str, reel_size: int) -> str:
-    result = f"{kem_id}-00$00$00${reel_size}"
+    result = f"{kem_id}$00$00${reel_size}"
     print(f"Sticker: {result}")
     return result
 
